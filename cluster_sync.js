@@ -4,7 +4,7 @@ const axios = require('axios');
 
 // 🔱 1. Configuration (Screenshot အရ အတည်ပြုပြီးသား Owner Name ကို သုံးထားသည်)
 const octokit = new Octokit({ auth: process.env.GH_TOKEN });
-const REPO_OWNER = "GOA-neurons"; //
+const REPO_OWNER = "GOA-neurons"; 
 const CORE_REPO = "delta-brain-sync";
 const REPO_NAME = process.env.GITHUB_REPOSITORY.split('/')[1];
 
@@ -22,27 +22,34 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-async function executeSwarmProtocol() {
+async function executeDeepSwarmProtocol() {
     try {
-        // 🔱 3. Listen to Core (Raw URL သုံး၍ API Limit ကို ကျော်ဖြတ်ခြင်း)
+        const startTime = Date.now();
+        
+        // 🔱 3. Listen to Core & Collect Intelligence
         const coreUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${CORE_REPO}/main/instruction.json`;
         const { data: instruction } = await axios.get(coreUrl);
-        
-        console.log(`📡 Signal Received: ${instruction.command} | Power: ${instruction.core_power}`);
+        const latency = Date.now() - startTime;
 
-        // 🔱 4. Report to Firebase
+        // GitHub API Limit စစ်ဆေးခြင်း (Deep Intelligence)
+        const { data: rateData } = await octokit.rateLimit.get();
+        const remaining = rateData.rate.remaining;
+
+        console.log(`📡 Signal Received: ${instruction.command} | API Left: ${remaining}`);
+
+        // 🔱 4. Report Deep Intelligence to Firebase
         await db.collection('cluster_nodes').doc(REPO_NAME).set({
             status: 'LINKED_TO_CORE',
             command: instruction.command,
-            power: instruction.core_power,
+            power: instruction.core_power || 0,
+            latency: `${latency}ms`,
+            api_remaining: remaining,
             replicate_mode: instruction.replicate || false,
             last_ping: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
-        // 🔱 5. Auto-Replication (Recursive Evolution Logic)
-        // ⚠️ မှတ်ချက် - Repo ပွားရန်အတွက် Token တွင် Workflow/Repo Scope အပြည့်ရှိရပါမည်
+        // 🔱 5. Auto-Replication (Recursive Evolution Logic - မင်းရဲ့ Code ဟောင်းမှ)
         if (instruction.replicate === true) {
-            // လက်ရှိ Node နံပါတ်ကို ထုတ်ယူခြင်း (swarm-node-0000001 ပုံစံမှ)
             let currentNum = 0;
             if (REPO_NAME.includes('swarm-node-')) {
                 currentNum = parseInt(REPO_NAME.replace('swarm-node-', ''));
@@ -56,19 +63,17 @@ async function executeSwarmProtocol() {
                 await octokit.repos.get({ owner: REPO_OWNER, repo: nextNodeName });
                 console.log(`✅ Unit ${nextNodeName} is already in the swarm.`);
             } catch (e) {
-                // မရှိသေးလျှင် အသစ်ပွားခြင်း
                 console.log(`🧬 Evolution Triggered: Spawning ${nextNodeName}...`);
                 
-                // Organization မဟုတ်ဘဲ User Account ဖြစ်နေပါက createForAuthenticatedUser ကို သုံးရနိုင်သည်
-                // Screenshot အရ GOA-neurons သည် User ဖြစ်နိုင်သောကြောင့် catch logic ထည့်ထားသည်
                 try {
+                    // Organization အတွက် ဆောက်ရန် ကြိုးစားခြင်း
                     await octokit.repos.createInOrg({
                         org: REPO_OWNER,
                         name: nextNodeName,
                         auto_init: true
                     });
                 } catch (orgErr) {
-                    // Org မဟုတ်ဘဲ User Repo အဖြစ် ဆောက်ခြင်း
+                    // User Account အတွက် ဆောက်ခြင်း (Screenshot အရ GOA-neurons အတွက်)
                     await octokit.repos.createForAuthenticatedUser({
                         name: nextNodeName,
                         auto_init: true
@@ -78,10 +83,10 @@ async function executeSwarmProtocol() {
             }
         }
 
-        console.log("🏁 Cycle Complete. System in Stealth mode.");
+        console.log(`🏁 Cycle Complete. Latency: ${latency}ms. Swarm is Synchronized.`);
     } catch (err) {
         console.error("❌ Swarm Unit Error:", err.message);
     }
 }
 
-executeSwarmProtocol();
+executeDeepSwarmProtocol();
