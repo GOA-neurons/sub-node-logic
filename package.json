@@ -1,1 +1,1 @@
-{"dependencies":{"@octokit/rest":"^20.1.2","@supabase/supabase-js":"^2.110.8","axios":"^1.18.1","bullmq":"^5.81.2","dotenv":"^17.4.2","firebase-admin":"^12.7.0","ioredis":"^5.11.1","pg":"^8.22.0"}}
+{"dependencies":{"@octokit/rest":"^20.1.2","@supabase/supabase-js":"^2.110.9","axios":"^1.18.1","bullmq":"^5.81.2","dotenv":"^17.4.2","firebase-admin":"^12.7.0","ioredis":"^5.11.1","pg":"^8.22.0"}}
